@@ -32,7 +32,6 @@ public abstract class Endpoint {
 
     public URL getURL() throws MalformedURLException {
         String path = baseURL+"/"+this.basePath+"/"+this.path;
-        System.out.println(path);
         return new URL(path);
     }
 

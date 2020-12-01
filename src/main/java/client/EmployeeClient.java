@@ -24,7 +24,6 @@ public class EmployeeClient {
         return getEmployeeEndpoint.getRequest();
     }
 
-
     public String getEmployeeRequestStatus() throws MalformedURLException, JsonProcessingException {
         return getEmployeeEndpoint.getLastResponse().getStatus();
     }
