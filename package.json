@@ -1,16 +1,28 @@
 {
   "name": "apitestproject",
   "version": "1.0.0",
-  "description": "Multi-agent test automation pipeline — auto-generated tests",
+  "description": "Multi-agent test automation pipeline — auto-generated BDD tests",
   "scripts": {
-    "test:cypress": "cypress run --reporter junit",
-    "test:playwright": "playwright test",
-    "test:all": "npm run test:cypress && npm run test:playwright"
+    "test:cypress": "cypress run",
+    "test:playwright": "bddgen && playwright test",
+    "test:all": "npm run test:cypress && npm run test:playwright",
+    "bdd:generate": "bddgen"
   },
   "devDependencies": {
     "cypress": "^13.0.0",
+    "@badeball/cypress-cucumber-preprocessor": "^20.0.0",
+    "@bahmutov/cypress-esbuild-bundler": "^2.0.0",
+    "esbuild": "^0.20.0",
     "@playwright/test": "^1.44.0",
+    "playwright-bdd": "^7.0.0",
     "mocha-junit-reporter": "^2.2.1",
     "typescript": "^5.4.0"
+  },
+  "@badeball/cypress-cucumber-preprocessor": {
+    "nonGlobalStepDefinitions": true,
+    "stepDefinitions": [
+      "cypress/support/step_definitions/**/*.{js,ts}"
+    ]
   }
 }
+

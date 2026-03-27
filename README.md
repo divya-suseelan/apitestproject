@@ -3,6 +3,255 @@
 A **reusable, plug-and-play** automation framework that takes Jira acceptance criteria all the way through to test results — with zero manual test writing.
 
 ```
+Jira AC  →  LLM Test Cases  →  BDD (.feature + steps + POM)  →  GitLab CI  →  Test Management
+```
+
+---
+
+## What's New in this version
+
+| Feature | Detail |
+|---------|--------|
+| **Cucumber / BDD** | Tests are generated as Gherkin `.feature` files + step definitions instead of raw `describe/it` or `test()` blocks |
+| **Self-healing locators** | POM methods accept a prioritised list of CSS selectors; if the primary selector fails the framework automatically tries fallbacks and logs the miss |
+| **Single-framework choice** | Each team picks **one** framework — `cypress` or `playwright` — instead of generating both |
+
+---
+
+## How It Works
+
+| # | Agent | What it does |
+|---|-------|-------------|
+| 1 | **Jira Reader** | Fetches stories by JQL and extracts acceptance criteria |
+| 2 | **Test Case Generator** | Uses an LLM (GPT-4o / Claude) to generate positive, negative & edge-case test scenarios |
+| 3 | **Cypress _or_ Playwright Implementer** | Generates Cucumber `.feature` + step definitions + self-healing POM class |
+| 4 | **GitLab Uploader** | Commits generated tests, triggers CI pipeline, optionally creates a Merge Request |
+| 5 | **Results Uploader** | Downloads JUnit artifacts and uploads results to Xray / Zephyr Scale / qTest |
+
+---
+
+## Quick Start
+
+### 1. Prerequisites
+
+- Python 3.11+
+- Node.js 20+
+- Access to: Jira Cloud, an LLM API (OpenAI / Anthropic / Azure OpenAI), GitLab, and a test management tool
+
+### 2. Clone & Install
+
+```bash
+git clone https://github.com/your-org/apitestproject.git
+cd apitestproject
+
+# Python dependencies
+pip install -r requirements.txt
+
+# Node dependencies
+npm install
+# If using Playwright, also install browsers:
+npx playwright install --with-deps
+```
+
+### 3. Configure
+
+```bash
+cp .env.example .env   # fill in your credentials
+```
+
+Edit `config/config.yaml` — the three key choices for each team:
+
+```yaml
+test_generation:
+  framework: "cypress"     # ← "cypress" OR "playwright"
+  bdd: true                # ← true = Cucumber .feature + steps
+  self_healing: true       # ← true = multi-selector fallback in POM
+  language: "typescript"
+```
+
+### 4. Run the Pipeline
+
+```bash
+# Use the framework set in config.yaml
+python main.py
+
+# Or override on the command line
+python main.py --framework playwright
+```
+
+---
+
+## BDD / Cucumber
+
+When `bdd: true`, the pipeline generates three files per Jira ticket:
+
+### Cypress (via `@badeball/cypress-cucumber-preprocessor`)
+
+| File | Location |
+|------|----------|
+| Feature file | `cypress/e2e/<TICKET>.feature` |
+| Step definitions | `cypress/support/step_definitions/<TICKET>.steps.ts` |
+| Page Object Model | `cypress/pages/<TicketPage>.ts` |
+
+### Playwright (via `playwright-bdd`)
+
+| File | Location |
+|------|----------|
+| Feature file | `playwright/features/<TICKET>.feature` |
+| Step definitions | `playwright/steps/<TICKET>.steps.ts` |
+| Page Object Model | `playwright/pages/<TicketPage>.ts` |
+
+**Example generated feature:**
+
+```gherkin
+Feature: PROJ-123 — Auto-generated tests
+
+  @PROJ123_TC_1 @positive @jira-PROJ-123
+  Scenario: PROJ123_TC_1: User can log in with valid credentials
+    Given I am on the login page
+    When I submit valid username and password
+    Then I should be redirected to the dashboard
+```
+
+---
+
+## Self-Healing Locators
+
+When `self_healing: true`, every POM method receives an ordered array of CSS selectors loaded from a **locator registry** JSON file.
+
+```
+cypress/support/locator_registry.json    (Cypress)
+playwright/support/locator_registry.json (Playwright)
+```
+
+The pipeline seeds the registry with three placeholder selectors per action (`data-testid`, `id`, `aria-label`). Teams replace the placeholders with real selectors from their application.
+
+**How it works at runtime:**
+
+1. Try selector `[0]` (primary)
+2. If not found within 2 s → try selector `[1]`, log a warning
+3. Continue until a selector succeeds or all are exhausted
+
+```typescript
+// Generated POM (Playwright example)
+async performPROJ123TC1(): Promise<void> {
+  const el = await findElement(this.page,
+    PROJ123Page_Locators['PROJ123TC1'] ?? []);
+  // TODO: interact with el
+}
+```
+
+```typescript
+// Generated POM (Cypress example)
+performPROJ123TC1(): void {
+  const el = selfHeal(PROJ123Page_Locators['PROJ123TC1'] ?? []);
+  // TODO: interact with el
+}
+```
+
+---
+
+## Team Onboarding (3 steps)
+
+1. **`config/config.yaml`** — set `framework`, `bdd`, `self_healing`, Jira project key, GitLab namespace
+2. **`.env`** — fill in API tokens
+3. **Run** `python main.py`
+
+The locator registry is auto-seeded with placeholder selectors. Teams update `locator_registry.json` with real selectors as they fill in the `// TODO` comments.
+
+---
+
+## Project Structure
+
+```
+apitestproject/
+├── agents/
+│   ├── base.py                    # Base class and config loader
+│   ├── coordinator.py             # Orchestrator (single-framework)
+│   ├── jira_reader.py             # Agent 1: Jira reader
+│   ├── test_case_generator.py     # Agent 2: LLM test case generator
+│   ├── cypress_implementer.py     # Agent 3a: Cypress (BDD or classic)
+│   ├── playwright_implementer.py  # Agent 3b: Playwright (BDD or classic)
+│   ├── self_healing.py            # Locator registry + seed utility
+│   ├── gitlab_uploader.py         # Agent 4: GitLab push + pipeline
+│   └── results_uploader.py        # Agent 5: Results → test management
+│
+├── templates/
+│   ├── cypress_feature.j2         # Cucumber .feature template (Cypress)
+│   ├── cypress_steps.j2           # Cypress step definitions template
+│   ├── cypress_pom.j2             # Cypress POM (with self-healing)
+│   ├── cypress_spec.j2            # Cypress classic spec template
+│   ├── playwright_feature.j2      # Cucumber .feature template (Playwright)
+│   ├── playwright_steps.j2        # Playwright step definitions template
+│   ├── playwright_pom.j2          # Playwright POM (with self-healing)
+│   └── playwright_spec.j2         # Playwright classic spec template
+│
+├── cypress/
+│   ├── e2e/                       # Generated .feature files
+│   ├── pages/                     # Generated POM classes
+│   ├── support/
+│   │   ├── e2e.ts                 # Global support (imports self_healing)
+│   │   ├── self_healing.ts        # selfHeal() custom helper
+│   │   ├── locator_registry.json  # Team-managed selector registry
+│   │   └── step_definitions/      # Generated step definitions
+│
+├── playwright/
+│   ├── features/                  # Generated .feature files
+│   ├── steps/                     # Generated step definitions
+│   ├── pages/                     # Generated POM classes
+│   └── support/
+│       ├── self_healing.ts        # findElement() helper
+│       └── locator_registry.json  # Team-managed selector registry
+│
+├── config/config.yaml             # ← Only file teams need to change
+├── .env.example
+├── .gitignore
+├── .gitlab-ci.yml                 # Single-framework CI (TEST_FRAMEWORK variable)
+├── cypress.config.ts              # Cypress + Cucumber preprocessor config
+├── playwright.config.ts           # Playwright + playwright-bdd config
+├── package.json
+├── requirements.txt
+├── tsconfig.json
+└── main.py                        # Entry point (--framework flag)
+```
+
+---
+
+## CI Pipeline
+
+Set the `TEST_FRAMEWORK` CI/CD variable in GitLab (**Settings → CI/CD → Variables**) to `cypress` or `playwright`. Only the matching job runs.
+
+| Stage | Job | Runs when |
+|-------|-----|-----------|
+| `install` | `install-deps` | Always |
+| `test` | `cypress-tests` | `TEST_FRAMEWORK == "cypress"` |
+| `test` | `playwright-tests` | `TEST_FRAMEWORK == "playwright"` |
+| `report` | `test-results` | Always (collects whichever ran) |
+
+For Playwright the CI script runs `npx bddgen` before `npx playwright test` to compile `.feature` files into runnable test cases.
+
+---
+
+## Supported Test Management Tools
+
+| Tool | Config value |
+|------|-------------|
+| Xray (Jira plugin) | `xray` |
+| Zephyr Scale | `zephyr_scale` |
+| qTest | `qtest` |
+| None / manual | `none` |
+
+---
+
+## Security Notes
+
+- **Never commit `.env`** — it is in `.gitignore`
+- All secrets are read from environment variables
+- Set GitLab CI tokens as **protected/masked** CI/CD variables
+
+A **reusable, plug-and-play** automation framework that takes Jira acceptance criteria all the way through to test results — with zero manual test writing.
+
+```
 Jira AC  →  Test Cases  →  Cypress + Playwright (POM)  →  GitLab CI  →  Test Management
 ```
 

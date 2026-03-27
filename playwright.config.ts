@@ -1,7 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
+import { defineBddConfig } from 'playwright-bdd';
+
+// playwright-bdd: point to feature files and step definitions
+const testDir = defineBddConfig({
+  features: 'playwright/features/**/*.feature',
+  steps: 'playwright/steps/**/*.steps.{ts,js}',
+  outputDir: '.bdd-output',
+});
 
 export default defineConfig({
-  testDir: './playwright/tests',
+  testDir,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

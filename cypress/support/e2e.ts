@@ -1,5 +1,8 @@
 // cypress/support/e2e.ts
-// Global support file — import custom commands here.
-// See: https://on.cypress.io/configuration
+// Global support file — imported automatically by every spec.
 
-// Example: import './commands';
+// Self-healing locator helper (logs fallback selector usage to the Cypress log)
+import './self_healing';
+
+// Add custom commands here, e.g.:
+// import './commands';

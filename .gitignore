@@ -28,6 +28,9 @@ playwright-report/
 test-results/
 output/
 
+# playwright-bdd generated test files
+.bdd-output/
+
 # Editor
 .idea/
 .vscode/

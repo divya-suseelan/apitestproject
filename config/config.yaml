@@ -20,13 +20,12 @@ llm:
   # API key read from env: OPENAI_API_KEY  (or ANTHROPIC_API_KEY / AZURE_OPENAI_API_KEY)
 
 test_generation:
-  frameworks:
-    - cypress
-    - playwright
+  framework: "cypress"         # "cypress" | "playwright"  — choose ONE per team
   include_negative_tests: true
   include_edge_cases: true
   language: "typescript"       # "javascript" | "typescript"
-  bdd_style: true              # generate Given/When/Then comments
+  bdd: true                    # true = generate Cucumber .feature + step definitions
+  self_healing: true           # true = POM uses multi-locator self-healing fallback
 
 gitlab:
   base_url: "https://gitlab.com"

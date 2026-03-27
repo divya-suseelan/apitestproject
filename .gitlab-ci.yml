@@ -1,6 +1,8 @@
 # =============================================================================
 # .gitlab-ci.yml — Multi-Agent Test Automation Pipeline
-# Runs both Cypress and Playwright tests and publishes JUnit results.
+# Runs EITHER Cypress OR Playwright (BDD/Cucumber) based on the TEST_FRAMEWORK
+# CI/CD variable.  Set TEST_FRAMEWORK to "cypress" or "playwright" in your
+# GitLab project's Settings → CI/CD → Variables.
 # =============================================================================
 
 stages:
@@ -11,6 +13,7 @@ stages:
 variables:
   BASE_URL: "http://your-app-url"   # Override per environment
   NODE_VERSION: "20"
+  TEST_FRAMEWORK: "cypress"         # "cypress" | "playwright"  — set in GitLab variables
 
 # ── Install ──────────────────────────────────────────────────────────────────
 install-deps:
@@ -18,9 +21,12 @@ install-deps:
   image: node:${NODE_VERSION}
   script:
     - npm ci
-    - npx playwright install --with-deps
+    - |
+      if [ "$TEST_FRAMEWORK" = "playwright" ]; then
+        npx playwright install --with-deps
+      fi
   cache:
-    key: "$CI_COMMIT_REF_SLUG-node"
+    key: "$CI_COMMIT_REF_SLUG-$TEST_FRAMEWORK-node"
     paths:
       - node_modules/
       - ~/.cache/ms-playwright/
@@ -29,14 +35,16 @@ install-deps:
       - node_modules/
     expire_in: 1 hour
 
-# ── Cypress ──────────────────────────────────────────────────────────────────
+# ── Cypress (BDD via @badeball/cypress-cucumber-preprocessor) ─────────────────
 cypress-tests:
   stage: test
   image: cypress/included:13.0.0
   needs: [install-deps]
+  rules:
+    - if: '$TEST_FRAMEWORK == "cypress"'
   script:
     - mkdir -p output/cypress-results
-    - npx cypress run --reporter junit --reporter-options "mochaFile=output/cypress-results/results-[hash].xml"
+    - npx cypress run
   artifacts:
     when: always
     reports:
@@ -47,13 +55,16 @@ cypress-tests:
       - cypress/videos/
     expire_in: 7 days
 
-# ── Playwright ───────────────────────────────────────────────────────────────
+# ── Playwright (BDD via playwright-bdd) ─────────────────────────────────────
 playwright-tests:
   stage: test
   image: mcr.microsoft.com/playwright:v1.44.0-jammy
   needs: [install-deps]
+  rules:
+    - if: '$TEST_FRAMEWORK == "playwright"'
   script:
     - mkdir -p output/playwright-results output/playwright-report
+    - npx bddgen          # generate Playwright test files from .feature files
     - npx playwright test
   artifacts:
     when: always
@@ -62,6 +73,7 @@ playwright-tests:
     paths:
       - output/playwright-results/
       - output/playwright-report/
+      - .bdd-output/
     expire_in: 7 days
 
 # ── Aggregate results (job the results agent looks for) ───────────────────────
@@ -71,13 +83,17 @@ test-results:
   needs:
     - job: cypress-tests
       artifacts: true
+      optional: true
     - job: playwright-tests
       artifacts: true
+      optional: true
   script:
+    - echo "Framework: $TEST_FRAMEWORK"
     - echo "All test results collected."
-    - ls -R output/
+    - ls -R output/ 2>/dev/null || echo "No output directory"
   artifacts:
     when: always
     paths:
       - output/
     expire_in: 30 days
+

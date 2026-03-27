@@ -1,0 +1,13 @@
+{
+  "_comment": "Locator registry — add real CSS/data-testid selectors for each action. The first selector in each array is preferred; subsequent entries are fallbacks used by the self-healing utility when the primary selector cannot be found.",
+  "_example": {
+    "PROJ123Page": {
+      "PROJ123TC1PositiveLogin": [
+        "[data-testid='login-button']",
+        "button[type='submit']",
+        "#login-btn",
+        "button:contains('Login')"
+      ]
+    }
+  }
+}

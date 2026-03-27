@@ -6,6 +6,7 @@ from .gitlab_uploader import GitLabUploaderAgent
 from .jira_reader import JiraReaderAgent
 from .playwright_implementer import PlaywrightImplementerAgent
 from .results_uploader import ResultsUploaderAgent
+from .self_healing import LocatorRegistry
 from .test_case_generator import TestCaseGeneratorAgent
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "PlaywrightImplementerAgent",
     "GitLabUploaderAgent",
     "ResultsUploaderAgent",
+    "LocatorRegistry",
 ]
