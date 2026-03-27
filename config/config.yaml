@@ -1,0 +1,54 @@
+# =============================================================================
+# Multi-Agent Test Automation Pipeline — Configuration
+# Copy this file and adjust values for your team/project.
+# Secrets (tokens, passwords) must be set as environment variables (see .env.example).
+# =============================================================================
+
+jira:
+  base_url: "https://your-org.atlassian.net"        # Jira Cloud base URL
+  project_key: "PROJ"                                # Jira project key
+  jql_filter: "project = PROJ AND sprint in openSprints() AND issuetype = Story"
+  acceptance_criteria_field: "description"           # or custom field id e.g. "customfield_10200"
+  # token read from env: JIRA_API_TOKEN
+  # email read from env: JIRA_EMAIL
+
+llm:
+  provider: "openai"           # "openai" | "anthropic" | "azure_openai"
+  model: "gpt-4o"              # model name
+  temperature: 0.2
+  max_tokens: 4096
+  # API key read from env: OPENAI_API_KEY  (or ANTHROPIC_API_KEY / AZURE_OPENAI_API_KEY)
+
+test_generation:
+  frameworks:
+    - cypress
+    - playwright
+  include_negative_tests: true
+  include_edge_cases: true
+  language: "typescript"       # "javascript" | "typescript"
+  bdd_style: true              # generate Given/When/Then comments
+
+gitlab:
+  base_url: "https://gitlab.com"
+  namespace: "your-group/your-repo"   # GitLab project path
+  default_branch: "main"
+  test_branch_prefix: "auto-tests"    # branch name: auto-tests/<jira-ticket-id>
+  create_merge_request: true          # true = MR for review, false = push directly
+  mr_target_branch: "main"
+  # token read from env: GITLAB_TOKEN
+
+test_management:
+  tool: "xray"                 # "xray" | "zephyr_scale" | "qtest" | "none"
+  jira_base_url: "https://your-org.atlassian.net"
+  # For Xray:  token read from env: XRAY_CLIENT_ID / XRAY_CLIENT_SECRET
+  # For Zephyr Scale: token read from env: ZEPHYR_API_TOKEN
+  # For qTest: token read from env: QTEST_API_TOKEN / QTEST_BASE_URL
+
+pipeline:
+  poll_interval_seconds: 15    # how often to poll GitLab pipeline status
+  timeout_seconds: 1800        # max time to wait for pipeline completion (30 min)
+  artifact_job_name: "test-results"   # GitLab job that produces result artifacts
+
+output:
+  results_dir: "./output"      # local directory for downloaded artifacts & reports
+  log_level: "INFO"            # DEBUG | INFO | WARNING | ERROR

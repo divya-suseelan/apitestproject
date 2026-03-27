@@ -1,0 +1,22 @@
+# Core
+pyyaml>=6.0
+python-dotenv>=1.0
+requests>=2.31
+
+# LLM / Agent framework
+openai>=1.30
+anthropic>=0.28
+langchain>=0.2
+langchain-openai>=0.1
+langchain-anthropic>=0.1
+jinja2>=3.1
+
+# Jira
+jira>=3.6
+
+# GitLab
+python-gitlab>=4.4
+
+# Utilities
+rich>=13.7          # pretty terminal output
+tenacity>=8.3       # retry logic

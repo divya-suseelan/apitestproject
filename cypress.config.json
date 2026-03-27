@@ -1,0 +1,15 @@
+{
+  "$schema": "https://on.cypress.io/cypress.schema.json",
+  "e2e": {
+    "baseUrl": "http://localhost:3000",
+    "specPattern": "cypress/e2e/**/*.cy.{js,ts}",
+    "supportFile": "cypress/support/e2e.ts",
+    "screenshotsFolder": "cypress/screenshots",
+    "videosFolder": "cypress/videos",
+    "reporter": "junit",
+    "reporterOptions": {
+      "mochaFile": "output/cypress-results/results-[hash].xml",
+      "toConsole": true
+    }
+  }
+}
